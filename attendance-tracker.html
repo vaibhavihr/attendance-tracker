@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Register</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  :root{--paper:#FAF8F2;--paper-line:#E4DFD0;--ink:#23201A;--ink-soft:#6B6558;--ink-faint:#A39C8C;--present:#4F7942;--present-bg:#E7EEE1;--absent:#B23A32;--absent-bg:#F5E4E1;--holiday:#8F8878;--holiday-bg:#EDEAE1;--warn:#B8842E;--warn-bg:#F3E7CF;--spine:#23201A;--sync:#3E7C7C;--sync-bg:#E1EEED;--radius:3px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  #loading{display:flex;align-items:center;justify-content:center;height:100vh;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;font-size:13px;}
+  #app{display:flex;min-height:100vh;}
+  .sidebar{width:220px;flex-shrink:0;background:var(--spine);color:var(--paper);display:flex;flex-direction:column;padding:28px 0 20px;}
+  .brand{padding:0 22px 24px;border-bottom:1px solid rgba(250,248,242,0.14);margin-bottom:18px;}
+  .brand .title{font-size:20px;font-weight:600;letter-spacing:.01em;}
+  .brand .sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#B8B2A0;letter-spacing:.08em;text-transform:uppercase;margin-top:4px;}
+  nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 12px;}
+  nav button{all:unset;cursor:pointer;padding:11px 12px;border-radius:2px;font-family:'Inter';font-size:13.5px;font-weight:500;color:#C9C4B4;letter-spacing:.01em;display:flex;align-items:center;gap:10px;transition:background .15s,color .15s;}
+  nav button .dot{width:6px;height:6px;border-radius:50%;background:#5C5745;flex-shrink:0;transition:background .15s;}
+  nav button:hover{background:rgba(250,248,242,0.06);color:var(--paper);}
+  nav button.active{background:rgba(250,248,242,0.1);color:var(--paper);}
+  nav button.active .dot{background:#D6A24E;}
+  .sidebar-foot{padding:14px 20px 0;border-top:1px solid rgba(250,248,242,0.14);margin-top:14px;}
+  .sidebar-foot button{all:unset;cursor:pointer;font-family:'IBM Plex Mono';font-size:10.5px;color:#847E6C;letter-spacing:.04em;}
+  .sidebar-foot button:hover{color:#C9C4B4;}
+  .content{flex:1;padding:40px 48px 80px;background-image:repeating-linear-gradient(to bottom,transparent,transparent 34px,var(--paper-line) 35px);max-width:100%;}
+  .page{display:none;}
+  .page.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  .page-head{margin-bottom:28px;}
+  .page-head h1{font-size:28px;font-weight:600;}
+  .page-head p{color:var(--ink-soft);font-size:13.5px;margin-top:4px;}
+  .overall-card{background:var(--ink);color:var(--paper);border-radius:6px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:18px;}
+  .overall-card .big{font-size:44px;font-weight:600;line-height:1;}
+  .overall-card .big-label{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#B8B2A0;margin-top:6px;}
+  .threshold-box{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono';font-size:12px;color:#C9C4B4;}
+  .threshold-box input{width:52px;background:rgba(250,248,242,0.08);border:1px solid rgba(250,248,242,0.2);color:var(--paper);border-radius:3px;padding:5px 6px;font-family:'IBM Plex Mono';font-size:12px;text-align:center;}
+  .subject-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .subject-card{background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;position:relative;overflow:hidden;}
+  .subject-card .bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .subject-card .name{font-weight:600;font-size:14.5px;margin-bottom:2px;}
+  .subject-card .days{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);letter-spacing:.04em;margin-bottom:12px;line-height:1.5;}
+  .subject-card .pct{font-family:'IBM Plex Mono';font-size:26px;font-weight:600;}
+  .subject-card .frac{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .subject-card .bunk{font-size:12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--paper-line);color:var(--ink-soft);}
+  .subject-card .bunk b{color:var(--ink);}
+  .track{height:5px;background:var(--paper-line);border-radius:3px;margin-top:8px;overflow:hidden;}
+  .track .fill{height:100%;border-radius:3px;}
+  .empty-state{border:1px dashed var(--paper-line);border-radius:6px;padding:36px 24px;text-align:center;color:var(--ink-soft);}
+  .empty-state .btn{margin-top:14px;}
+  .btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--paper);font-family:'Inter';font-weight:500;font-size:13px;padding:9px 16px;border-radius:4px;transition:opacity .15s;}
+  .btn:hover{opacity:.85;}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--paper-line);}
+  .btn.ghost:hover{background:#fff;}
+  .btn.sm{padding:6px 11px;font-size:12px;}
+  .btn.danger{background:var(--absent);}
+  .btn.sync{background:var(--sync);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  input[type=text],input[type=date],input[type=time],input[type=url],input[type=password],textarea,select{font-family:'Inter';font-size:13.5px;color:var(--ink);border:1px solid var(--paper-line);border-radius:4px;padding:9px 11px;background:#fff;width:100%;}
+  input[type=time]{width:auto;min-width:110px;}
+  textarea{resize:vertical;min-height:56px;font-family:'Inter';}
+  label{font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:6px;}
+  .panel{background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:22px 24px;margin-bottom:22px;}
+  .panel h3{font-size:15px;margin-bottom:14px;}
+  .form-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;}
+  .form-field{flex:1;min-width:160px;}
+  .day-picker{display:flex;gap:6px;flex-wrap:wrap;}
+  .day-chip{all:unset;cursor:pointer;font-family:'IBM Plex Mono';font-size:11.5px;padding:7px 10px;border-radius:4px;border:1px solid var(--paper-line);color:var(--ink-soft);transition:.12s;}
+  .day-chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:4px;}
+  .week-col{border:1px solid var(--paper-line);border-radius:5px;padding:10px 8px;min-height:70px;background:#FEFDFA;}
+  .week-col .wd{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);letter-spacing:.05em;margin-bottom:8px;}
+  .week-tag{font-size:11px;padding:4px 6px;border-radius:3px;margin-bottom:4px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;justify-content:space-between;align-items:center;gap:4px;}
+  .week-tag .ttime{font-family:'IBM Plex Mono';font-size:9.5px;opacity:.9;font-weight:400;}
+  .subj-card{background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;margin-bottom:14px;}
+  .subj-card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .subj-card-head .swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+  .subj-card-head .sname{font-weight:600;font-size:14.5px;flex:1;}
+  .slot-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .slot-pill{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:11px;padding:5px 10px;border-radius:4px;background:var(--paper);border:1px solid var(--paper-line);color:var(--ink-soft);}
+  .slot-pill .rm{all:unset;cursor:pointer;color:var(--absent);font-size:14px;line-height:1;}
+  .slot-pill .rm:hover{color:#8a2a24;}
+  .add-slot-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .add-slot-row .day-chip{font-size:10.5px;padding:5px 8px;}
+  .log-nav{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+  .icon-btn{all:unset;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--paper-line);border-radius:4px;background:#fff;}
+  .icon-btn:hover{background:var(--paper-line);}
+  .holiday-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12.5px;color:var(--ink-soft);}
+  .log-row{background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;margin-bottom:12px;}
+  .log-row-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .log-row-top .sname{font-weight:600;font-size:14.5px;flex:1;}
+  .log-row-top .stime{font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-faint);font-weight:400;}
+  .stamp-btn{all:unset;cursor:pointer;font-family:'IBM Plex Mono';font-size:11px;font-weight:600;letter-spacing:.03em;padding:7px 12px;border-radius:4px;border:1.5px solid var(--paper-line);color:var(--ink-soft);text-transform:uppercase;transition:transform .12s;}
+  .stamp-btn.present.active{background:var(--present-bg);border-color:var(--present);color:var(--present);}
+  .stamp-btn.absent.active{background:var(--absent-bg);border-color:var(--absent);color:var(--absent);}
+  .stamp-btn.cancelled.active{background:var(--holiday-bg);border-color:var(--holiday);color:var(--holiday);}
+  .stamp-btn.stamped{animation:stamp .28s ease;}
+  @keyframes stamp{0%{transform:scale(1);}40%{transform:scale(1.14) rotate(-2deg);}100%{transform:scale(1);}}
+  .note-saved{font-family:'IBM Plex Mono';font-size:10px;color:var(--present);opacity:0;transition:opacity .3s;}
+  .note-saved.show{opacity:1;}
+  .holiday-banner{background:var(--holiday-bg);border:1px solid var(--holiday);color:var(--ink);border-radius:6px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .cal-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .cal-head h2{font-size:18px;min-width:170px;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;font-size:11.5px;color:var(--ink-soft);}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-dow{font-family:'IBM Plex Mono';font-size:10px;color:var(--ink-faint);text-align:center;padding-bottom:4px;}
+  .cal-cell{aspect-ratio:1;border-radius:5px;border:1px solid var(--paper-line);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-soft);transition:transform .1s;}
+  .cal-cell:hover{transform:translateY(-2px);}
+  .cal-cell.blank{visibility:hidden;cursor:default;}
+  .cal-cell.today{box-shadow:0 0 0 2px var(--ink) inset;}
+  .cal-cell.day-present{background:var(--present-bg);color:var(--present);border-color:var(--present);}
+  .cal-cell.day-absent{background:var(--absent-bg);color:var(--absent);border-color:var(--absent);}
+  .cal-cell.day-mixed{background:var(--warn-bg);color:var(--warn);border-color:var(--warn);}
+  .cal-cell.day-holiday{background:var(--holiday-bg);color:var(--holiday);border-color:var(--holiday);}
+  .cal-cell.day-unmarked{border-style:dashed;}
+  .cal-cell.day-empty{background:transparent;border-color:transparent;color:var(--ink-faint);}
+  .cal-cell.selected{box-shadow:0 0 0 2px var(--ink);}
+  .day-detail{margin-top:22px;background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:20px 22px;}
+  .day-detail h3{font-size:14.5px;margin-bottom:12px;}
+  .detail-item{padding:10px 0;border-bottom:1px solid var(--paper-line);font-size:13px;}
+  .detail-item:last-child{border-bottom:none;}
+  .detail-item .drow{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+  .detail-item .dstatus{font-family:'IBM Plex Mono';font-size:10.5px;text-transform:uppercase;padding:2px 6px;border-radius:3px;}
+  .detail-item .dnote{color:var(--ink-soft);font-size:12.5px;margin-top:3px;padding-left:19px;}
+  .detail-item .dtime{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);margin-left:auto;}
+  .sync-status{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-faint);margin-top:8px;}
+  .sync-status.ok{color:var(--present);}
+  .sync-status.err{color:var(--absent);}
+  .setup-step{background:var(--paper);border:1px solid var(--paper-line);border-radius:5px;padding:14px 16px;margin-bottom:10px;font-size:13px;}
+  .setup-step b{display:block;margin-bottom:4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);}
+  .setup-step code{background:#fff;padding:2px 5px;border-radius:3px;font-family:'IBM Plex Mono';font-size:11.5px;border:1px solid var(--paper-line);}
+  .key-badge{display:inline-flex;align-items:center;gap:6px;background:var(--sync-bg);color:var(--sync);border:1px solid var(--sync);border-radius:4px;padding:4px 10px;font-family:'IBM Plex Mono';font-size:11px;font-weight:600;}
+  @media (max-width:760px){#app{flex-direction:column;}.sidebar{width:100%;flex-direction:row;align-items:center;padding:14px 16px;overflow-x:auto;}.brand{border-bottom:none;padding:0 14px 0 0;margin-bottom:0;}.brand .sub{display:none;}nav{flex-direction:row;padding:0;}.sidebar-foot{border-top:none;margin-top:0;padding:0 0 0 10px;}.content{padding:24px 16px 60px;}.week-grid{grid-template-columns:repeat(2,1fr);}.overall-card{padding:20px;}.subject-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="loading">Loading your register…</div>
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="brand"><div class="title">Register</div><div class="sub">Attendance &amp; class notes</div></div>
+    <nav>
+      <button data-page="dashboard" class="active"><span class="dot"></span>Dashboard</button>
+      <button data-page="log"><span class="dot"></span>Log attendance</button>
+      <button data-page="calendar"><span class="dot"></span>Calendar</button>
+      <button data-page="timetable"><span class="dot"></span>Timetable</button>
+      <button data-page="sync"><span class="dot"></span>Cloud Sync</button>
+    </nav>
+    <div class="sidebar-foot"><button id="resetBtn">Reset all data</button></div>
+  </aside>
+  <main class="content">
+    <section id="page-dashboard" class="page active"><div class="page-head"><h1>Dashboard</h1><p>Your standing across every subject, at a glance.</p></div><div id="dashboardBody"></div></section>
+    <section id="page-log" class="page"><div class="page-head"><h1>Log attendance</h1><p>Mark today's classes, or fix an earlier date.</p></div><div id="logBody"></div></section>
+    <section id="page-calendar" class="page"><div class="page-head"><h1>Calendar</h1><p>A month at a glance — click any day to see notes.</p></div><div id="calendarBody"></div></section>
+    <section id="page-timetable" class="page"><div class="page-head"><h1>Timetable</h1><p>Set up which subjects run on which days and at what time.</p></div><div id="timetableBody"></div></section>
+    <section id="page-sync" class="page"><div class="page-head"><h1>Cloud Sync</h1><p>Back up your data to Firebase and access it from any device.</p></div><div id="syncBody"></div></section>
+  </main>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+"use strict";
+
+var WD_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var WD_ORDER = [1,2,3,4,5,6,0];
+var PALETTE = ['#8B5A83','#3E7C7C','#5B7C99','#C99A3C','#A6493D','#7A8B69','#4B5A85'];
+
+var subjects = [];
+var holidays = [];
+var attendance = {};
+var settings = { threshold: 75 };
+
+var currentLogDate = todayStr();
+var calYear, calMonth;
+var selectedCalDate = null;
+
+var firebaseApp = null;
+var firebaseDb = null;
+
+function safeJSON(v){
+  try { return JSON.parse(v); } catch(e) { return undefined; }
+}
+function storeGet(key, fallback){
+  try {
+    var raw = localStorage.getItem('attreg_' + key);
+    if(raw === null) return fallback;
+    var parsed = safeJSON(raw);
+    return parsed !== undefined ? parsed : fallback;
+  } catch(e) { return fallback; }
+}
+function storeSet(key, value){
+  try { localStorage.setItem('attreg_' + key, JSON.stringify(value)); } catch(e) {}
+}
+
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function todayStr(){
+  var d = new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function uid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+function fmtLong(dateStr){
+  var d = new Date(dateStr+'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+function fmtTime(timeStr){
+  var parts = timeStr.split(':');
+  var h = parseInt(parts[0],10), m = parseInt(parts[1],10);
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + pad(m) + ' ' + ampm;
+}
+function weekdayOf(dateStr){ return new Date(dateStr+'T00:00:00').getDay(); }
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function loadAll(){
+  subjects = storeGet('subjects', []);
+  if(!Array.isArray(subjects)) subjects = [];
+  holidays = storeGet('holidays', []);
+  if(!Array.isArray(holidays)) holidays = [];
+  attendance = storeGet('attendance', {});
+  if(!attendance || typeof attendance !== 'object') attendance = {};
+  settings = storeGet('settings', { threshold: 75 });
+  if(!settings || typeof settings !== 'object' || typeof settings.threshold !== 'number'){
+    settings = { threshold: 75 };
+  }
+}
+function saveSubjects(){ storeSet('subjects', subjects); }
+function saveHolidays(){ storeSet('holidays', holidays); }
+function saveAttendance(){ storeSet('attendance', attendance); }
+function saveSettings(){ storeSet('settings', settings); }
+
+function nextColor(){ return PALETTE[subjects.length % PALETTE.length]; }
+
+function addSubject(name, day, time){
+  if(!name || !name.trim()) return;
+  subjects.push({
+    id: uid(),
+    name: name.trim(),
+    color: nextColor(),
+    slots: [{ id: uid(), day: parseInt(day,10), time: time }]
+  });
+  saveSubjects();
+}
+function deleteSubject(id){
+  subjects = subjects.filter(function(s){ return s.id !== id; });
+  var slotIds = {};
+  subjects.forEach(function(s){
+    (s.slots || []).forEach(function(sl){ slotIds[sl.id] = true; });
+  });
+  Object.keys(attendance).forEach(function(k){
+    var slotId = k.slice(k.lastIndexOf('::') + 2);
+    if(!slotIds[slotId]) delete attendance[k];
+  });
+  saveSubjects(); saveAttendance();
+}
+function addSlot(subjId, day, time){
+  var s = subjects.find(function(x){ return x.id === subjId; });
+  if(!s) return;
+  if(!Array.isArray(s.slots)) s.slots = [];
+  s.slots.push({ id: uid(), day: parseInt(day,10), time: time });
+  saveSubjects();
+}
+function deleteSlot(subjId, slotId){
+  var s = subjects.find(function(x){ return x.id === subjId; });
+  if(!s) return;
+  if(!Array.isArray(s.slots)) s.slots = [];
+  s.slots = s.slots.filter(function(sl){ return sl.id !== slotId; });
+  Object.keys(attendance).forEach(function(k){
+    if(k.endsWith('::' + slotId)) delete attendance[k];
+  });
+  saveSubjects(); saveAttendance();
+}
+
+function attKey(date, slotId){ return date + '::' + slotId; }
+function getAtt(date, slotId){
+  return attendance[attKey(date, slotId)] || { status:'unmarked', note:'' };
+}
+function setAttStatus(date, slotId, status){
+  var key = attKey(date, slotId);
+  var cur = attendance[key] || { status:'unmarked', note:'' };
+  attendance[key] = { status: cur.status === status ? 'unmarked' : status, note: cur.note || '' };
+  saveAttendance();
+}
+function setAttNote(date, slotId, note){
+  var key = attKey(date, slotId);
+  var cur = attendance[key] || { status:'unmarked', note:'' };
+  attendance[key] = { status: cur.status, note: note };
+  saveAttendance();
+}
+
+function isHoliday(date){ return holidays.indexOf(date) > -1; }
+function toggleHoliday(date){
+  var i = holidays.indexOf(date);
+  if(i > -1) holidays.splice(i,1); else holidays.push(date);
+  saveHolidays();
+}
+
+function scheduledFor(date){
+  if(isHoliday(date)) return [];
+  var wd = weekdayOf(date);
+  var result = [];
+  subjects.forEach(function(s){
+    (s.slots || []).forEach(function(slot){
+      if(slot.day === wd){
+        result.push({
+          subjId: s.id,
+          slotId: slot.id,
+          name: s.name,
+          color: s.color,
+          time: slot.time,
+          day: slot.day
+        });
+      }
+    });
+  });
+  result.sort(function(a,b){ return a.time.localeCompare(b.time); });
+  return result;
+}
+
+function subjectStats(subjId){
+  var subj = subjects.find(function(s){ return s.id === subjId; });
+  if(!subj) return { present:0, absent:0, total:0, pct:null };
+  var slotIds = {};
+  (subj.slots || []).forEach(function(sl){ slotIds[sl.id] = true; });
+  var present=0, absent=0;
+  Object.keys(attendance).forEach(function(k){
+    var slotId = k.slice(k.lastIndexOf('::') + 2);
+    if(slotIds[slotId]){
+      var st = attendance[k].status;
+      if(st==='present') present++;
+      else if(st==='absent') absent++;
+    }
+  });
+  var total = present+absent;
+  return { present:present, absent:absent, total:total, pct: total ? (present/total*100) : null };
+}
+function overallStats(){
+  var present=0, absent=0;
+  Object.values(attendance).forEach(function(a){
+    if(a.status==='present') present++;
+    else if(a.status==='absent') absent++;
+  });
+  var total = present+absent;
+  return { present:present, absent:absent, total:total, pct: total ? (present/total*100) : null };
+}
+function bunkInfo(present, absent, thresholdPct){
+  var total = present+absent;
+  if(total===0) return null;
+  var pct = present/total*100;
+  var t = thresholdPct/100;
+  if(t<=0 || t>=1) return null;
+  if(pct >= thresholdPct){
+    var skip = Math.floor(present/t - total);
+    return { type:'skip', n: Math.max(skip,0) };
+  } else {
+    var need = Math.ceil((t*total - present)/(1-t));
+    return { type:'need', n: Math.max(need,1) };
+  }
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('nav button').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelector('nav button[data-page="'+id+'"]').classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='log') renderLog();
+  if(id==='calendar') renderCalendar();
+  if(id==='timetable') renderTimetable();
+  if(id==='sync') renderSync();
+}
+
+function renderDashboard(){
+  var el = document.getElementById('dashboardBody');
+  if(!el) return;
+  var stats = overallStats();
+  var pctDisplay = stats.pct===null ? '—' : stats.pct.toFixed(1)+'%';
+
+  var html = '';
+  html += '<div class="overall-card">';
+  html += '  <div><div class="big mono">'+pctDisplay+'</div><div class="big-label">Overall attendance · '+stats.present+' / '+stats.total+' classes</div></div>';
+  html += '  <div class="threshold-box">Target <input type="number" id="thresholdInput" min="1" max="100" value="'+settings.threshold+'"> %</div>';
+  html += '</div>';
+
+  if(subjects.length===0){
+    html += '<div class="empty-state"><div class="display" style="font-size:16px;">No subjects yet</div>';
+    html += '<p style="margin-top:6px; font-size:13px;">Add your classes in the Timetable tab to start tracking.</p>';
+    html += '<button class="btn ghost" id="goTimetableBtn">Set up timetable →</button></div>';
+    el.innerHTML = html;
+    var btn = document.getElementById('goTimetableBtn');
+    if(btn) btn.onclick = function(){ showPage('timetable'); };
+  } else {
+    html += '<div class="subject-grid">';
+    subjects.forEach(function(s){
+      var st = subjectStats(s.id);
+      var pct = st.pct===null ? null : st.pct;
+      var pctText = pct===null ? '—' : pct.toFixed(1)+'%';
+      var bunk = bunkInfo(st.present, st.absent, settings.threshold);
+      var bunkText = 'No classes logged yet.';
+      if(bunk){
+        bunkText = bunk.type==='skip'
+          ? (bunk.n>0 ? 'You can skip <b>'+bunk.n+'</b> more class'+(bunk.n===1?'':'es')+' and stay above '+settings.threshold+'%.' : 'Right at the edge — skip one more and you will dip below '+settings.threshold+'%.')
+          : 'Attend the next <b>'+bunk.n+'</b> class'+(bunk.n===1?'':'es')+' to reach '+settings.threshold+'%.';
+      }
+      var barColor = pct===null ? 'var(--paper-line)' : (pct >= settings.threshold ? 'var(--present)' : 'var(--absent)');
+      var slots = Array.isArray(s.slots) ? s.slots : [];
+      var slotText = slots.length===0 ? 'No slots' : slots.slice().sort(function(a,b){
+        return a.day - b.day || a.time.localeCompare(b.time);
+      }).map(function(sl){ return WD_NAMES[sl.day]+' '+fmtTime(sl.time); }).join(' · ');
+      html += '<div class="subject-card">';
+      html += '  <div class="bar" style="background:'+s.color+'"></div>';
+      html += '  <div class="name">'+escapeHtml(s.name)+'</div>';
+      html += '  <div class="days">'+escapeHtml(slotText)+'</div>';
+      html += '  <div class="pct mono">'+pctText+'</div>';
+      html += '  <div class="frac mono">'+st.present+' present · '+st.absent+' absent</div>';
+      html += '  <div class="track"><div class="fill" style="width:'+(pct||0)+'%; background:'+barColor+'"></div></div>';
+      html += '  <div class="bunk">'+bunkText+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  var ti = document.getElementById('thresholdInput');
+  if(ti){
+    ti.addEventListener('change', function(){
+      var v = parseInt(ti.value,10);
+      if(isNaN(v) || v<1) v = 1;
+      if(v>100) v = 100;
+      settings.threshold = v;
+      saveSettings();
+      renderDashboard();
+    });
+  }
+}
+
+function renderTimetable(){
+  var el = document.getElementById('timetableBody');
+  if(!el) return;
+  var html = '';
+
+  html += '<div class="panel">';
+  html += '  <h3>Add a subject</h3>';
+  html += '  <div class="form-row">';
+  html += '    <div class="form-field"><label>Subject name</label><input type="text" id="newSubjName" placeholder="e.g. Data Structures"></div>';
+  html += '    <div class="form-field" style="flex:0 0 140px;"><label>Time</label><input type="time" id="newSubjTime" value="09:00"></div>';
+  html += '  </div>';
+  html += '  <div class="form-field" style="margin-bottom:14px;"><label>Which day?</label>';
+  html += '    <div class="day-picker" id="newSubjDays">';
+  WD_ORDER.forEach(function(d){
+    html += '<button type="button" class="day-chip" data-day="'+d+'">'+WD_NAMES[d]+'</button>';
+  });
+  html += '    </div></div>';
+  html += '  <button class="btn" id="addSubjectBtn">Add subject</button>';
+  html += '</div>';
+
+  html += '<div class="panel"><h3>Weekly view</h3><div class="week-grid">';
+  WD_ORDER.forEach(function(d){
+    html += '<div class="week-col"><div class="wd">'+WD_NAMES[d]+'</div>';
+    var daySlots = [];
+    subjects.forEach(function(s){
+      (s.slots || []).forEach(function(sl){
+        if(sl.day===d) daySlots.push({ name:s.name, color:s.color, time:sl.time });
+      });
+    });
+    daySlots.sort(function(a,b){ return a.time.localeCompare(b.time); });
+    daySlots.forEach(function(ds){
+      html += '<div class="week-tag" style="background:'+ds.color+'">'+escapeHtml(ds.name)+'<span class="ttime">'+fmtTime(ds.time)+'</span></div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  html += '<div class="panel"><h3>All subjects</h3>';
+  if(subjects.length===0){
+    html += '<p style="color:var(--ink-soft); font-size:13px;">Nothing added yet — use the form above.</p>';
+  } else {
+    subjects.forEach(function(s){
+      html += '<div class="subj-card">';
+      html += '  <div class="subj-card-head">';
+      html += '    <span class="swatch" style="background:'+s.color+'"></span>';
+      html += '    <span class="sname">'+escapeHtml(s.name)+'</span>';
+      html += '    <button class="btn danger sm" data-del-subj="'+s.id+'">Remove</button>';
+      html += '  </div>';
+      html += '  <div class="slot-list">';
+      var slots = Array.isArray(s.slots) ? s.slots : [];
+      slots.slice().sort(function(a,b){ return a.day-b.day || a.time.localeCompare(b.time); }).forEach(function(sl){
+        html += '<span class="slot-pill">'+WD_NAMES[sl.day]+' '+fmtTime(sl.time)+'<button class="rm" data-del-slot="'+sl.id+'" data-subj="'+s.id+'">×</button></span>';
+      });
+      if(slots.length===0) html += '<span style="font-size:12px; color:var(--ink-faint);">No slots</span>';
+      html += '  </div>';
+      html += '  <div class="add-slot-row">';
+      html += '    <span style="font-size:12px; color:var(--ink-soft); font-weight:500;">Add slot:</span>';
+      html += '    <div class="day-picker">';
+      WD_ORDER.forEach(function(d){
+        html += '<button type="button" class="day-chip" data-add-day="'+d+'" data-add-subj="'+s.id+'">'+WD_NAMES[d]+'</button>';
+      });
+      html += '    </div>';
+      html += '    <input type="time" class="add-slot-time" data-add-subj="'+s.id+'" value="10:00" style="width:110px;">';
+      html += '    <button class="btn sm" data-add-slot="'+s.id+'">Add</button>';
+      html += '  </div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  var pickedDay = null;
+  el.querySelectorAll('#newSubjDays .day-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      el.querySelectorAll('#newSubjDays .day-chip').forEach(function(c){ c.classList.remove('on'); });
+      chip.classList.add('on');
+      pickedDay = parseInt(chip.dataset.day,10);
+    });
+  });
+  var addBtn = document.getElementById('addSubjectBtn');
+  if(addBtn){
+    addBtn.addEventListener('click', function(){
+      var nameInput = document.getElementById('newSubjName');
+      var timeInput = document.getElementById('newSubjTime');
+      if(pickedDay===null){ alert('Pick a day first.'); return; }
+      addSubject(nameInput ? nameInput.value : '', pickedDay, timeInput ? timeInput.value : '09:00');
+      renderTimetable();
+      renderDashboard();
+    });
+  }
+
+  el.querySelectorAll('[data-del-subj]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var subj = subjects.find(function(s){ return s.id === btn.dataset.delSubj; });
+      if(confirm('Remove "'+escapeHtml(subj ? subj.name : '')+'" and all its data?')){
+        deleteSubject(btn.dataset.delSubj);
+        renderTimetable();
+        renderDashboard();
+      }
+    });
+  });
+
+  el.querySelectorAll('[data-del-slot]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      deleteSlot(btn.dataset.subj, btn.dataset.delSlot);
+      renderTimetable();
+      renderDashboard();
+    });
+  });
+
+  el.querySelectorAll('[data-add-day]').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var subjId = chip.dataset.addSubj;
+      var row = chip.closest('.add-slot-row');
+      if(!row) return;
+      row.querySelectorAll('[data-add-day]').forEach(function(c){ c.classList.remove('on'); });
+      chip.classList.add('on');
+      row.dataset.pickedDay = chip.dataset.addDay;
+    });
+  });
+
+  el.querySelectorAll('[data-add-slot]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var subjId = btn.dataset.addSlot;
+      var row = btn.closest('.add-slot-row');
+      if(!row) return;
+      var day = row.dataset.pickedDay;
+      var timeInput = row.querySelector('.add-slot-time');
+      var time = timeInput ? timeInput.value : '10:00';
+      if(day===undefined){ alert('Pick a day first.'); return; }
+      addSlot(subjId, day, time);
+      renderTimetable();
+      renderDashboard();
+    });
+  });
+}
+
+function renderLog(){
+  var el = document.getElementById('logBody');
+  if(!el) return;
+  var date = currentLogDate;
+  var holiday = isHoliday(date);
+
+  var html = '';
+  html += '<div class="log-nav">';
+  html += '  <button class="icon-btn" id="prevDayBtn">‹</button>';
+  html += '  <input type="date" id="logDateInput" value="'+date+'" style="width:170px;">';
+  html += '  <button class="icon-btn" id="nextDayBtn">›</button>';
+  html += '  <span class="mono" style="font-size:12.5px; color:var(--ink-soft);">'+fmtLong(date)+'</span>';
+  html += '  <label class="holiday-toggle"><input type="checkbox" id="holidayCheck" '+(holiday?'checked':'')+'> Mark whole day as holiday</label>';
+  html += '</div>';
+
+  if(holiday){
+    html += '<div class="holiday-banner"><span>This day is marked as a holiday — no classes to log.</span><button class="btn ghost sm" id="unmarkHolidayBtn">Undo</button></div>';
+    el.innerHTML = html;
+    wireLogNav();
+    var undoBtn = document.getElementById('unmarkHolidayBtn');
+    if(undoBtn) undoBtn.addEventListener('click', function(){ toggleHoliday(date); renderLog(); renderCalendar(); });
+    return;
+  }
+
+  var scheduled = scheduledFor(date);
+  if(scheduled.length===0){
+    html += '<div class="empty-state">No classes scheduled on '+WD_NAMES[weekdayOf(date)]+'s. <br><span style="font-size:12px;">Add slots for this day in the Timetable tab.</span></div>';
+    el.innerHTML = html;
+    wireLogNav();
+    return;
+  }
+
+  scheduled.forEach(function(sch){
+    var a = getAtt(date, sch.slotId);
+    html += '<div class="log-row" data-slot="'+sch.slotId+'">';
+    html += '  <div class="log-row-top">';
+    html += '    <span class="swatch" style="background:'+sch.color+'"></span>';
+    html += '    <span class="sname">'+escapeHtml(sch.name)+' <span class="stime">'+fmtTime(sch.time)+'</span></span>';
+    html += '    <button class="stamp-btn present'+(a.status==='present'?' active':'')+'" data-status="present">Present</button>';
+    html += '    <button class="stamp-btn absent'+(a.status==='absent'?' active':'')+'" data-status="absent">Absent</button>';
+    html += '    <button class="stamp-btn cancelled'+(a.status==='cancelled'?' active':'')+'" data-status="cancelled">Cancelled</button>';
+    html += '  </div>';
+    html += '  <textarea placeholder="What did you cover in this class? (optional)">'+escapeHtml(a.note)+'</textarea>';
+    html += '  <div class="note-saved">Saved ✓</div>';
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+  wireLogNav();
+
+  el.querySelectorAll('.log-row').forEach(function(row){
+    var slotId = row.dataset.slot;
+    row.querySelectorAll('.stamp-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        setAttStatus(date, slotId, btn.dataset.status);
+        btn.classList.add('stamped');
+        setTimeout(function(){ btn.classList.remove('stamped'); }, 300);
+        row.querySelectorAll('.stamp-btn').forEach(function(b){
+          b.classList.toggle('active', b===btn && getAtt(date,slotId).status===b.dataset.status);
+        });
+      });
+    });
+    var ta = row.querySelector('textarea');
+    var saved = row.querySelector('.note-saved');
+    if(ta){
+      ta.addEventListener('blur', function(){
+        setAttNote(date, slotId, ta.value);
+        if(saved) saved.classList.add('show');
+        setTimeout(function(){ if(saved) saved.classList.remove('show'); }, 1200);
+      });
+    }
+  });
+}
+
+function wireLogNav(){
+  var dateInput = document.getElementById('logDateInput');
+  if(dateInput){
+    dateInput.addEventListener('change', function(e){
+      currentLogDate = e.target.value;
+      renderLog();
+    });
+  }
+  var prevBtn = document.getElementById('prevDayBtn');
+  if(prevBtn){
+    prevBtn.addEventListener('click', function(){
+      currentLogDate = shiftDate(currentLogDate, -1);
+      renderLog();
+    });
+  }
+  var nextBtn = document.getElementById('nextDayBtn');
+  if(nextBtn){
+    nextBtn.addEventListener('click', function(){
+      currentLogDate = shiftDate(currentLogDate, 1);
+      renderLog();
+    });
+  }
+  var hc = document.getElementById('holidayCheck');
+  if(hc){
+    hc.addEventListener('change', function(){
+      toggleHoliday(currentLogDate);
+      renderLog();
+      renderCalendar();
+    });
+  }
+}
+function shiftDate(dateStr, delta){
+  var d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+
+function dayStatus(dateStr){
+  if(isHoliday(dateStr)) return 'holiday';
+  var scheduled = scheduledFor(dateStr);
+  if(scheduled.length===0) return 'empty';
+  var present=0, absent=0, marked=0;
+  scheduled.forEach(function(sch){
+    var a = getAtt(dateStr, sch.slotId);
+    if(a.status==='present'){present++; marked++;}
+    else if(a.status==='absent'){absent++; marked++;}
+    else if(a.status==='cancelled'){marked++;}
+  });
+  if(marked===0) return 'unmarked';
+  if(present>0 && absent===0) return 'present';
+  if(absent>0 && present===0) return 'absent';
+  if(present>0 && absent>0) return 'mixed';
+  return 'unmarked';
+}
+
+function renderCalendar(){
+  var el = document.getElementById('calendarBody');
+  if(!el) return;
+  if(calYear===undefined){
+    var t = new Date();
+    calYear = t.getFullYear(); calMonth = t.getMonth();
+  }
+  var monthName = new Date(calYear, calMonth, 1).toLocaleDateString('en-US',{month:'long', year:'numeric'});
+  var daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  var firstOffset = (new Date(calYear, calMonth, 1).getDay() + 6) % 7;
+
+  var html = '';
+  html += '<div class="cal-head">';
+  html += '  <button class="icon-btn" id="prevMonthBtn">‹</button>';
+  html += '  <h2 class="display">'+monthName+'</h2>';
+  html += '  <button class="icon-btn" id="nextMonthBtn">›</button>';
+  html += '</div>';
+  html += '<div class="legend">';
+  html += '<span><i style="background:var(--present-bg); border:1px solid var(--present);"></i>All present</span>';
+  html += '<span><i style="background:var(--absent-bg); border:1px solid var(--absent);"></i>Absent</span>';
+  html += '<span><i style="background:var(--warn-bg); border:1px solid var(--warn);"></i>Mixed</span>';
+  html += '<span><i style="background:var(--holiday-bg); border:1px solid var(--holiday);"></i>Holiday</span>';
+  html += '<span><i style="border:1.5px dashed var(--paper-line);"></i>Not logged yet</span>';
+  html += '</div>';
+
+  html += '<div class="cal-grid">';
+  WD_ORDER.forEach(function(d){ html += '<div class="cal-dow">'+WD_NAMES[d]+'</div>'; });
+  for(var i=0;i<firstOffset;i++) html += '<div class="cal-cell blank"></div>';
+  for(var day=1; day<=daysInMonth; day++){
+    var dateStr = calYear+'-'+pad(calMonth+1)+'-'+pad(day);
+    var status = dayStatus(dateStr);
+    var isToday = dateStr===todayStr();
+    var isSelected = dateStr===selectedCalDate;
+    html += '<div class="cal-cell day-'+status+(isToday?' today':'')+(isSelected?' selected':'')+'" data-date="'+dateStr+'">'+day+'</div>';
+  }
+  html += '</div>';
+  html += '<div id="dayDetailWrap"></div>';
+
+  el.innerHTML = html;
+
+  var prevMonthBtn = document.getElementById('prevMonthBtn');
+  if(prevMonthBtn){
+    prevMonthBtn.addEventListener('click', function(){
+      calMonth--; if(calMonth<0){calMonth=11; calYear--;}
+      renderCalendar();
+    });
+  }
+  var nextMonthBtn = document.getElementById('nextMonthBtn');
+  if(nextMonthBtn){
+    nextMonthBtn.addEventListener('click', function(){
+      calMonth++; if(calMonth>11){calMonth=0; calYear++;}
+      renderCalendar();
+    });
+  }
+  el.querySelectorAll('.cal-cell[data-date]').forEach(function(cell){
+    cell.addEventListener('click', function(){
+      selectedCalDate = cell.dataset.date;
+      renderCalendar();
+    });
+  });
+
+  if(selectedCalDate) renderDayDetail(selectedCalDate);
+}
+
+function renderDayDetail(dateStr){
+  var wrap = document.getElementById('dayDetailWrap');
+  if(!wrap) return;
+  var html = '<div class="day-detail"><h3>'+fmtLong(dateStr)+'</h3>';
+
+  if(isHoliday(dateStr)){
+    html += '<p style="color:var(--ink-soft); font-size:13px;">Marked as a holiday.</p>';
+  } else {
+    var scheduled = scheduledFor(dateStr);
+    if(scheduled.length===0){
+      html += '<p style="color:var(--ink-soft); font-size:13px;">No classes scheduled this day.</p>';
+    } else {
+      scheduled.forEach(function(sch){
+        var a = getAtt(dateStr, sch.slotId);
+        var colorMap = { present:'var(--present)', absent:'var(--absent)', cancelled:'var(--holiday)', unmarked:'var(--ink-faint)' };
+        var bgMap = { present:'var(--present-bg)', absent:'var(--absent-bg)', cancelled:'var(--holiday-bg)', unmarked:'var(--paper-line)' };
+        html += '<div class="detail-item">';
+        html += '  <div class="drow"><span class="swatch" style="background:'+sch.color+'"></span><b>'+escapeHtml(sch.name)+'</b>';
+        html += '  <span class="dtime">'+fmtTime(sch.time)+'</span>';
+        html += '  <span class="dstatus" style="color:'+colorMap[a.status]+'; background:'+bgMap[a.status]+'">'+a.status+'</span></div>';
+        if(a.note) html += '  <div class="dnote">'+escapeHtml(a.note)+'</div>';
+        html += '</div>';
+      });
+    }
+  }
+  html += '<button class="btn ghost sm" id="editInLogBtn" style="margin-top:12px;">Edit this day in Log →</button>';
+  html += '</div>';
+  wrap.innerHTML = html;
+  var editBtn = document.getElementById('editInLogBtn');
+  if(editBtn){
+    editBtn.addEventListener('click', function(){
+      currentLogDate = dateStr;
+      showPage('log');
+    });
+  }
+}
+
+// ---------- Firebase Sync ----------
+function hashKey(str){
+  var hash = 0;
+  for(var i=0; i<str.length; i++){
+    var char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'u' + Math.abs(hash).toString(16) + str.length.toString(36);
+}
+
+function getSyncConfig(){
+  return storeGet('syncConfig', { url:'', key:'' });
+}
+function setSyncConfig(url, key){
+  storeSet('syncConfig', { url:url, key:key });
+}
+
+function initFirebase(url){
+  if(!url) return false;
+  try {
+    if(firebaseApp) return true;
+    firebaseApp = firebase.initializeApp({ databaseURL: url });
+    firebaseDb = firebase.database();
+    return true;
+  } catch(e) {
+    console.error('Firebase init failed:', e);
+    return false;
+  }
+}
+
+function getDbRef(){
+  var cfg = getSyncConfig();
+  if(!cfg.url || !cfg.key) return null;
+  if(!firebaseDb){
+    if(!initFirebase(cfg.url)) return null;
+  }
+  return firebaseDb.ref('users/' + hashKey(cfg.key) + '/data');
+}
+
+function pushToCloud(callback){
+  var ref = getDbRef();
+  if(!ref){
+    if(callback) callback('Not configured');
+    return;
+  }
+  var payload = {
+    subjects: subjects,
+    holidays: holidays,
+    attendance: attendance,
+    settings: settings,
+    updatedAt: Date.now()
+  };
+  ref.set(payload).then(function(){
+    if(callback) callback(null, 'Saved to cloud');
+  }).catch(function(err){
+    if(callback) callback(err.message || 'Save failed');
+  });
+}
+
+function pullFromCloud(callback){
+  var ref = getDbRef();
+  if(!ref){
+    if(callback) callback('Not configured');
+    return;
+  }
+  ref.once('value').then(function(snapshot){
+    var data = snapshot.val();
+    if(!data){
+      if(callback) callback(null, 'No cloud data found');
+      return;
+    }
+    if(data.subjects) subjects = data.subjects;
+    if(data.holidays) holidays = data.holidays;
+    if(data.attendance) attendance = data.attendance;
+    if(data.settings) settings = data.settings;
+    saveSubjects(); saveHolidays(); saveAttendance(); saveSettings();
+    if(callback) callback(null, 'Loaded from cloud');
+  }).catch(function(err){
+    if(callback) callback(err.message || 'Load failed');
+  });
+}
+
+function renderSync(){
+  var el = document.getElementById('syncBody');
+  if(!el) return;
+  var cfg = getSyncConfig();
+  var connected = !!firebaseDb;
+
+  var html = '';
+  html += '<div class="panel">';
+  html += '  <h3>How it works</h3>';
+  html += '  <p style="font-size:13px; color:var(--ink-soft); line-height:1.6; margin-bottom:14px;">';
+  html += '    Your data is stored in a free Firebase Realtime Database. ';
+  html += '    Only you can access it because it lives at a secret path derived from your sync key. ';
+  html += '    Enter the same database URL and sync key on any device to keep everything in sync.';
+  html += '  </p>';
+  html += '</div>';
+
+  html += '<div class="panel">';
+  html += '  <h3>Connection</h3>';
+  html += '  <div class="form-row">';
+  html += '    <div class="form-field"><label>Firebase Database URL</label><input type="url" id="syncUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" value="'+escapeHtml(cfg.url)+'"></div>';
+  html += '    <div class="form-field"><label>Sync Key (your private password)</label><input type="password" id="syncKey" placeholder="e.g. my-secret-key-42" value="'+escapeHtml(cfg.key)+'"></div>';
+  html += '  </div>';
+  html += '  <button class="btn sync" id="saveSyncBtn">Save connection</button>';
+  html += '  <div class="sync-status" id="syncStatus"></div>';
+  html += '</div>';
+
+  html += '<div class="panel">';
+  html += '  <h3>Sync actions</h3>';
+  html += '  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">';
+  html += '    <button class="btn sync" id="pushBtn" '+(connected?'':'disabled')+'>↑ Push to cloud</button>';
+  html += '    <button class="btn" id="pullBtn" '+(connected?'':'disabled')+'>↓ Pull from cloud</button>';
+  html += '  </div>';
+  html += '  <p style="font-size:12px; color:var(--ink-faint);">';
+  html += '    <b>Push</b> uploads your current local data and overwrites the cloud copy. ';
+  html += '    <b>Pull</b> downloads the cloud copy and overwrites your local data.';
+  html += '  </p>';
+  html += '  <div class="sync-status" id="actionStatus"></div>';
+  html += '</div>';
+
+  html += '<div class="panel">';
+  html += '  <h3>Setup guide (one time)</h3>';
+  html += '  <div class="setup-step">';
+  html += '    <b>1. Create a Firebase project</b>';
+  html += '    Go to <code>firebase.google.com</code> and click <b>Add project</b>. Give it any name.';
+  html += '  </div>';
+  html += '  <div class="setup-step">';
+  html += '    <b>2. Create a Realtime Database</b>';
+  html += '    In the left menu, click <b>Build → Realtime Database</b> then <b>Create database</b>. ';
+  html += '    Choose <b>Start in test mode</b>.';
+  html += '  </div>';
+  html += '  <div class="setup-step">';
+  html += '    <b>3. Copy the URL</b>';
+  html += '    You will see a URL like <code>https://your-project-default-rtdb.firebaseio.com/</code>. ';
+  html += '    Paste it above.';
+  html += '  </div>';
+  html += '  <div class="setup-step">';
+  html += '    <b>4. Pick a sync key</b>';
+  html += '    This is your private password. Make it long and random. No one can access your data without it.';
+  html += '  </div>';
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  var saveBtn = document.getElementById('saveSyncBtn');
+  if(saveBtn){
+    saveBtn.addEventListener('click', function(){
+      var urlInput = document.getElementById('syncUrl');
+      var keyInput = document.getElementById('syncKey');
+      var url = urlInput ? urlInput.value.trim() : '';
+      var key = keyInput ? keyInput.value.trim() : '';
+      if(!url || !key){
+        setSyncStatus('Please enter both URL and key');
+        return;
+      }
+      setSyncConfig(url, key);
+      if(initFirebase(url)){
+        setSyncStatus('Connected successfully', true);
+        renderSync();
+      } else {
+        setSyncStatus('Failed to connect. Check the URL.', false, true);
+      }
+    });
+  }
+
+  var pushBtn = document.getElementById('pushBtn');
+  if(pushBtn){
+    pushBtn.addEventListener('click', function(){
+      setActionStatus('Pushing...');
+      pushToCloud(function(err, msg){
+        if(err) setActionStatus(err, false, true);
+        else setActionStatus(msg, true);
+      });
+    });
+  }
+
+  var pullBtn = document.getElementById('pullBtn');
+  if(pullBtn){
+    pullBtn.addEventListener('click', function(){
+      if(!confirm('This will overwrite your local data with the cloud copy. Continue?')) return;
+      setActionStatus('Pulling...');
+      pullFromCloud(function(err, msg){
+        if(err) setActionStatus(err, false, true);
+        else {
+          setActionStatus(msg, true);
+          renderDashboard(); renderTimetable(); renderLog(); renderCalendar();
+        }
+      });
+    });
+  }
+
+  // Auto-connect if config exists
+  if(cfg.url && cfg.key && !firebaseDb){
+    initFirebase(cfg.url);
+  }
+}
+
+function setSyncStatus(msg, ok, err){
+  var el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status' + (ok ? ' ok' : '') + (err ? ' err' : '');
+}
+function setActionStatus(msg, ok, err){
+  var el = document.getElementById('actionStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status' + (ok ? ' ok' : '') + (err ? ' err' : '');
+}
+
+function init(){
+  try {
+    loadAll();
+    var loader = document.getElementById('loading');
+    var app = document.getElementById('app');
+    if(loader) loader.style.display = 'none';
+    if(app) app.style.display = 'flex';
+
+    document.querySelectorAll('nav button').forEach(function(btn){
+      btn.addEventListener('click', function(){ showPage(btn.dataset.page); });
+    });
+    var resetBtn = document.getElementById('resetBtn');
+    if(resetBtn){
+      resetBtn.addEventListener('click', function(){
+        if(confirm('This clears every subject, holiday, and logged class permanently. Continue?')){
+          subjects=[]; holidays=[]; attendance={}; settings={threshold:75};
+          saveSubjects(); saveHolidays(); saveAttendance(); saveSettings();
+          renderDashboard(); renderTimetable(); renderLog(); renderCalendar();
+          showPage('dashboard');
+        }
+      });
+    }
+
+    renderDashboard();
+  } catch(err) {
+    console.error('Init error:', err);
+    var loader = document.getElementById('loading');
+    if(loader){
+      loader.innerHTML = 'Error loading register. Check console (F12) for details.<br><small>'+escapeHtml(String(err))+'</small>';
+    }
+  }
+}
+
+init();
+
+// Fallback: force show app after 1.5s no matter what
+setTimeout(function(){
+  var app = document.getElementById('app');
+  var loader = document.getElementById('loading');
+  if(app && app.style.display === 'none'){
+    console.warn('[Register] Fallback timer firing — forcing app visible');
+    app.style.display = 'flex';
+    if(loader) loader.style.display = 'none';
+  }
+}, 1500);
+})();
+</script>
+</body>
+</html>
