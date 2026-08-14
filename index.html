@@ -341,10 +341,10 @@ function loadAll(){
   }
   tasks = storeGet('tasks', []);
   if(!Array.isArray(tasks)) tasks = [];
-  // Migrate old task format (remove emoji/tag, add date/completedDate)
+  // Normalize: Firebase strips nulls, so undefined date means unscheduled
   tasks = tasks.map(function(t){
-    if(t.date === undefined) t.date = null;
-    if(t.completedDate === undefined) t.completedDate = null;
+    if(t.date === undefined || t.date === '') t.date = null;
+    if(t.completedDate === undefined || t.completedDate === '') t.completedDate = null;
     delete t.emoji; delete t.tag;
     return t;
   });
@@ -1014,7 +1014,13 @@ function pullFromCloud(callback){
     if(data.holidays) holidays = data.holidays;
     if(data.attendance) attendance = data.attendance;
     if(data.settings) settings = data.settings;
-    if(data.tasks) tasks = data.tasks;
+    if(data.tasks){
+      tasks = data.tasks.map(function(t){
+        if(t.date === undefined) t.date = null;
+        if(t.completedDate === undefined) t.completedDate = null;
+        return t;
+      });
+    }
     if(data.stickyDates) stickyDates = data.stickyDates;
     saveSubjects(); saveHolidays(); saveAttendance(); saveSettings(); saveTasks(); saveStickyDates();
     if(callback) callback(null, 'Loaded from cloud');
@@ -1175,7 +1181,7 @@ function deleteTask(id){
 }
 function scheduleTask(id, date){
   var t = tasks.find(function(x){ return x.id === id; });
-  if(t){ t.date = date; saveTasks(); }
+  if(t){ t.date = date || null; saveTasks(); }
 }
 function unscheduleTask(id){
   var t = tasks.find(function(x){ return x.id === id; });
@@ -1210,7 +1216,7 @@ function renderTasks(){
   if(taskFilter === 'ongoing' || taskFilter === 'all'){
     // General list
     var generalTasks = tasks.filter(function(t){
-      return t.date === null && (taskFilter === 'all' ? true : !t.done);
+      return t.date == null && (taskFilter === 'all' ? true : !t.done);
     });
 
     html += '<div class="general-list">';
